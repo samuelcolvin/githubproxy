@@ -2,21 +2,24 @@ import mime from 'mime/lite'
 
 export async function proxy(request: Request): Promise<Response> {
   const {pathname} = new URL(request.url)
-  console.log('headers:', Object.fromEntries(request.headers.entries()))
   if (pathname === '/') {
     return info_page()
   }
   const proxy_url = proxy_path(pathname)
-  const headers = new Headers(request.headers)
+  console.log(`proxying ${pathname} -> ${proxy_url}`)
+  const request_headers = new Headers(request.headers)
   const {host} = new URL(proxy_url)
-  headers.set('host', host)
-  headers.delete('referer')
+  request_headers.set('host', host)
+  request_headers.set('origin', host)
+  request_headers.delete('referer')
 
-  const fetch_response = await fetch(proxy_url, {headers})
-  const response = new Response(fetch_response.body, fetch_response)
-  response.headers.set('content-type', mime_type(pathname))
-  response.headers.set('access-control-allow-origin', '*')
-  return response
+  const response_headers = {
+    'content-type': mime_type(pathname),
+    'access-control-allow-origin': '*',
+  }
+
+  const fetch_response = await fetch(proxy_url, {headers: request_headers})
+  return new Response(fetch_response.body, {headers: response_headers})
 }
 
 function info_page(): Response {
