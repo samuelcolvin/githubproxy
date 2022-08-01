@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>GitHub Proxy</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        background-color: #0d1117;
+        color: #c9d1d9;
+        font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        margin: 10px 10px 20px;
+        font-size: 16px;
+      }
+      @media only screen and (min-width: 600px) {
+        body {
+          margin: 40px 10px 60px;
+        }
+      }
+      main {
+        width: min(calc(100vw - 20px), 902px);
+        box-sizing: border-box;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 10px 15px 40px;
+        word-wrap: break-word;
+      }
+      a {
+        color: #58a6ff;
+        text-decoration: none;
+      }
+      #form {
+        display: flex;
+        justify-content: center;
+      }
+      input {
+        margin: 3px;
+        padding: 5px 10px;
+        border-radius: 2px;
+        border: none;
+        font-size: 14px;
+        display: block;
+      }
+      input[type="text"] {
+        width: 500px;
+      }
+      input[type="submit"] {
+        background-color: #58a6ff;
+        color: white;
+        cursor: pointer;
+      }
+    </style>
+</head>
+
+<body>
+  <main>
+    <h1>GitHub Proxy</h1>
+    <p>See the project <a href="https://github.com/samuelcolvin/githubproxy">README</a> for more information.</p>
+    <form id="form">
+      <input type="text" name="url" placeholder="Enter a GitHub asset URL to proxy" />
+      <input type="submit" value="Go" />
+    </form>
+  </main>
+  <script>
+    const url_input = document.querySelector('input[name="url"]')
+    const form = document.getElementById('form')
+    form.addEventListener('submit', e => {
+      e.preventDefault()
+      const url = url_input.value
+      if (url && url.length) {
+        const new_url = new URL(url)
+        new_url.hostname = location.hostname
+        window.location.href = new_url.toString()
+      }
+    })
+  </script>
+</body>
+</html>

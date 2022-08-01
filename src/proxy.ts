@@ -2,10 +2,12 @@ import mime from 'mime/lite'
 
 export async function proxy(request: Request): Promise<Response> {
   const {pathname} = new URL(request.url)
+  let proxy_url
   if (pathname === '/') {
-    return info_page()
+    proxy_url = 'https://github.com/samuelcolvin/githubproxy/blob/main/index.html'
+  } else {
+    proxy_url = proxy_path(pathname)
   }
-  const proxy_url = proxy_path(pathname)
   console.log(`proxying ${pathname} -> ${proxy_url}`)
   const request_headers = new Headers(request.headers)
   const {host} = new URL(proxy_url)
@@ -19,20 +21,10 @@ export async function proxy(request: Request): Promise<Response> {
   }
 
   const fetch_response = await fetch(proxy_url, {headers: request_headers})
-  return new Response(fetch_response.body, {headers: response_headers})
+  return new Response(fetch_response.body, {headers: response_headers, status: fetch_response.status})
 }
 
-function info_page(): Response {
-  const html = `
-<div>
-  <h1>GitHub Proxy</h1>
-  <div>To use this proxy, append the path of the file you want from github to this domain.</div>
-</div>
-`
-  return new Response(html, {headers: {'content-type': 'text/html'}})
-}
-
-const archive_zip_regex = new RegExp('/[^/]+/[^/]+/archive/refs/[^/]+/[^/.]+.zip')
+const archive_zip_regex = new RegExp('/[^/]+/[^/]+/archive/.+?.zip')
 const gist_regex = new RegExp('/[^/]+/[0-9a-f]{32}/raw/.+')
 
 function proxy_path(pathname: string): string {
