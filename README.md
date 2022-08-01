@@ -9,7 +9,7 @@ Proxy for GitHub that adds `Content-Type` and `Access-Control-Allow-Origin: *` h
 Just add the path of the file you want to proxy to `https://githubproxy.samuelcolvin.workers.dev`.
 
 
-E.g. if you want to view the README of the repository `https://github.com/samuelcolvin/githubproxy/blob/main/README.md`,
+E.g. if you want to view this README `https://github.com/samuelcolvin/githubproxy/blob/main/README.md`,
 you'd go to:
 
 ``
