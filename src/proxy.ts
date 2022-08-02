@@ -1,8 +1,7 @@
 import mime from 'mime/lite'
 
 export async function proxy(request: Request): Promise<Response> {
-  let {pathname} = new URL(request.url)
-  pathname = custom_pathnames[pathname] || pathname
+  const pathname = get_pathname(request.url)
   const proxy_url = proxy_path(pathname)
   console.log(`proxying ${pathname} -> ${proxy_url}`)
   const request_headers = new Headers(request.headers)
@@ -11,12 +10,16 @@ export async function proxy(request: Request): Promise<Response> {
   request_headers.set('origin', host)
   request_headers.delete('referer')
 
+  const fetch_response = await fetch(proxy_url, {headers: request_headers})
+  let content_type = mime_type(pathname)
+  if (fetch_response.status != 200 && !['text/html', 'text/plain'].includes(content_type)) {
+    // if we got a non-200 response, and it's not a text response, force text/plain
+    content_type = 'text/plain'
+  }
   const response_headers = {
-    'content-type': mime_type(pathname),
+    'content-type': content_type,
     'access-control-allow-origin': '*',
   }
-
-  const fetch_response = await fetch(proxy_url, {headers: request_headers})
   return new Response(fetch_response.body, {headers: response_headers, status: fetch_response.status})
 }
 
@@ -24,9 +27,24 @@ const custom_pathnames: Record<string, string> = {
   '/': '/samuelcolvin/githubproxy/blob/main/index.html',
   '/favicon.ico': '/samuelcolvin/smokeshow/blob/main/icons/favicon.ico',
 }
+const repo_root_regex = new RegExp('^/[^/]+/[^/]+/blob/[^/]+/?$')
 
-const archive_zip_regex = new RegExp('/[^/]+/[^/]+/archive/.+?.zip')
-const gist_regex = new RegExp('/[^/]+/[0-9a-f]{32}/raw/.+')
+function get_pathname(url: string): string {
+  let {pathname} = new URL(url)
+  // remove extra leading slashes in case of copy-and-paste mistakes
+  pathname = pathname.replace(/^\/{2,}/, '/')
+  const static_custom = custom_pathnames[pathname]
+  if (static_custom) {
+    return static_custom
+  } else if (repo_root_regex.test(pathname)) {
+    return pathname + (pathname.endsWith('/') ? '' : '/') + '/README.md'
+  } else {
+    return pathname
+  }
+}
+
+const archive_zip_regex = new RegExp('^/[^/]+/[^/]+/archive/.+?.zip?')
+const gist_regex = new RegExp('^/[^/]+/[0-9a-f]{32}/raw/')
 
 function proxy_path(pathname: string): string {
   if (archive_zip_regex.test(pathname)) {
@@ -45,31 +63,20 @@ function proxy_path(pathname: string): string {
 
 function mime_type(pathname: string): string {
   let mime_type: string | null = null
-  const m_filename = pathname.match(/[^/]+$/)
-  if (m_filename) {
-    mime_type = known_mime_filenames[m_filename[0]]
-  }
-  if (mime_type == null) {
-    const m_ext = pathname.toLocaleLowerCase().match(/\.[a-z]+$/)
-    if (m_ext) {
-      const ext = m_ext[0]
-      mime_type = known_mime_extensions[ext]
-      if (!mime_type) {
-        mime_type = mime.getType(ext)
-      }
+  const m_ext = pathname.toLocaleLowerCase().match(/\.[a-z]+$/)
+  if (m_ext) {
+    const ext = m_ext[0]
+    mime_type = known_mime_extensions[ext]
+    if (!mime_type) {
+      mime_type = mime.getType(ext)
     }
   }
-  return mime_type || 'application/octet-stream'
+  // defaulting to text/plain covers all the other files we don't know about
+  // e.g. .lock, .gitignore, Makefile - I'm sure this will mess up someone's day, but it's very useful
+  // in many cases.
+  return mime_type || 'text/plain'
 }
 
 const known_mime_extensions: Record<string, string> = {
   '.ico': 'image/vnd.microsoft.icon',
-  '.lock': 'text/plain',
-}
-
-const known_mime_filenames: Record<string, string> = {
-  '.gitignore': 'text/plain',
-  '.gitattributes': 'text/plain',
-  'Makefile': 'text/plain',
-  'LICENSE': 'text/plain',
 }
