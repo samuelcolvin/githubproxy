@@ -4,13 +4,9 @@ export async function proxy(request: Request): Promise<Response> {
   const pathname = get_pathname(request.url)
   const proxy_url = proxy_path(pathname)
   console.log(`proxying ${pathname} -> ${proxy_url}`)
-  const request_headers = new Headers(request.headers)
-  const {host} = new URL(proxy_url)
-  request_headers.set('host', host)
-  request_headers.set('origin', host)
-  request_headers.delete('referer')
 
-  const fetch_response = await fetch(proxy_url, {headers: request_headers})
+  const fetch_response = await fetch(proxy_url, {headers: gh_request_headers(request, proxy_url)})
+
   let content_type = mime_type(pathname)
   if (fetch_response.status != 200 && !['text/html', 'text/plain'].includes(content_type)) {
     // if we got a non-200 response, and it's not a text response, force text/plain
@@ -43,8 +39,9 @@ function get_pathname(url: string): string {
   }
 }
 
-const archive_zip_regex = new RegExp('^/[^/]+/[^/]+/archive/.+?.zip?')
+const archive_zip_regex = new RegExp('^/[^/]+/[^/]+/archive/.+?.zip$')
 const gist_regex = new RegExp('^/[^/]+/[0-9a-f]{32}/raw/')
+const reload_asset_regex = new RegExp('^/[^/]+/[^/]+/releases/download/')
 
 function proxy_path(pathname: string): string {
   if (archive_zip_regex.test(pathname)) {
@@ -53,12 +50,24 @@ function proxy_path(pathname: string): string {
   } else if (gist_regex.test(pathname)) {
     console.log(`${pathname} is a gist`)
     // assume the "Raw" link on a file on a gist
-    return 'https://gist.githubusercontent.com/' + pathname
+    return 'https://gist.githubusercontent.com' + pathname
+  } else if (reload_asset_regex.test(pathname)) {
+    // we go to the github.com URL and let github do the redirecting
+    return 'https://github.com' + pathname
   } else {
     console.log(`${pathname} is a regular file`)
     // assume a github repo file
     return 'https://raw.githubusercontent.com' + pathname.replace('/blob', '')
   }
+}
+
+function gh_request_headers(request: Request, url: string): Headers {
+  const headers = new Headers(request.headers)
+  const {host} = new URL(url)
+  headers.set('host', host)
+  headers.set('origin', host)
+  headers.delete('referer')
+  return headers
 }
 
 function mime_type(pathname: string): string {
@@ -79,4 +88,5 @@ function mime_type(pathname: string): string {
 
 const known_mime_extensions: Record<string, string> = {
   '.ico': 'image/vnd.microsoft.icon',
+  '.whl': 'application/octet-stream',
 }
