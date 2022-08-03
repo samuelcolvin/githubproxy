@@ -46,10 +46,9 @@
       input[type="text"] {
         width: 500px;
       }
-      input[type="submit"] {
-        background-color: #58a6ff;
-        color: white;
-        cursor: pointer;
+      #destination {
+        margin: 20px 10px 5px;
+        text-align: center;
       }
     </style>
 </head>
@@ -59,20 +58,31 @@
     <h1>GitHub Proxy</h1>
     <p>See the project <a href="https://github.com/samuelcolvin/githubproxy">README</a> for more information.</p>
     <form id="form">
-      <input type="text" name="url" placeholder="Enter a GitHub asset URL to proxy" />
-      <input type="submit" value="Go" />
+      <input type="text" name="url" placeholder="Enter a GitHub asset URL to proxy" autocomplete="off" />
     </form>
+    <div id="destination"></div>
   </main>
   <script>
     const url_input = document.querySelector('input[name="url"]')
     const form = document.getElementById('form')
-    form.addEventListener('submit', e => {
-      e.preventDefault()
+    const set_dest = dest => {
+      document.getElementById('destination').innerHTML = dest
+    }
+    form.addEventListener('input', () => {
       const url = url_input.value
       if (url && url.length) {
-        const new_url = new URL(url)
+        let new_url
+        try {
+          new_url = new URL(url)
+        } catch (e) {
+          set_dest('')
+          return
+        }
         new_url.hostname = location.hostname
-        window.location.href = new_url.toString()
+        new_url = new_url.toString()
+        set_dest(`Proxy URL:<br/><a href="${new_url}">${new_url}</a>`)
+      } else {
+        set_dest('')
       }
     })
   </script>
