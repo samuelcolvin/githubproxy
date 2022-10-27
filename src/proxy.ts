@@ -2,6 +2,10 @@ import mime from 'mime/lite'
 
 export async function proxy(request: Request): Promise<Response> {
   const pathname = get_pathname(request.url)
+  if (pathname.startsWith('/search')) {
+    return search_redirect(request)
+  }
+
   const proxy_url = proxy_path(pathname)
   console.log(`proxying ${pathname} -> ${proxy_url}`)
 
@@ -89,4 +93,22 @@ function mime_type(pathname: string): string {
 const known_mime_extensions: Record<string, string> = {
   '.ico': 'image/vnd.microsoft.icon',
   '.whl': 'application/octet-stream',
+}
+
+const issue_regex = new RegExp('^([^/#]+)/([^/#]+)#(\\d+)$')
+
+// To use as a chrome custom search engine:
+function search_redirect(request: Request): Response {
+  const {searchParams} = new URL(request.url)
+  const search_param = searchParams.get('search')
+  const issue_match = search_param?.match(issue_regex)
+  if (issue_match) {
+    const [, owner, repo, id] = issue_match
+    // even if this is a PR, github will redirect to the PR
+    return Response.redirect(`https://github.com/${owner}/${repo}/issues/${id}`, 302)
+  } else if (search_param) {
+    return Response.redirect(`https://github.com/${search_param}`, 302)
+  } else {
+    return new Response('No "search" param provided', {status: 400})
+  }
 }
