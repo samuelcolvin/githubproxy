@@ -86,7 +86,10 @@
       }
     })
     // don't let the form submit
-    form.addEventListener('submit', e => e.preventDefault())
+    form.addEventListener('submit', e => {
+      e.preventDefault()
+      return false
+    })
   </script>
 </body>
 </html>
