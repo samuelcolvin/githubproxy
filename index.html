@@ -85,6 +85,8 @@
         set_dest('')
       }
     })
+    // don't let the form submit
+    form.addEventListener('submit', e => e.preventDefault())
   </script>
 </body>
 </html>
